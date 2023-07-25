@@ -9,22 +9,54 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cors());
 
-
-
+// 連接 MongoDB 資料庫
 mongoose.connect('mongodb+srv://409630760:ray2340104@database.2fesecl.mongodb.net/data', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-  
 })
-  .then(() => console.log('Connected to MongoDB\n------------------------------'))
-  .catch(error => console.error('MongoDB connection error:', error));
+  .then(() => console.log('連結至MongoDB\n------------------------------'))
+  .catch(error => console.error('MongoDB連結錯誤:', error));
 
 // 建立 MongoDB 模型
 const User = mongoose.model('user1', {
   account: String,
   password: String,
-  content: String
+  content: {
+    type: [String], // 將 content 定義為字串型別的陣列
+    default: [] // 將預設值設置為空陣列
+  }
 });
+
+let fileContentsArray = []; // 存放 aa.txt 的內容陣列
+
+// 讀取 aa.txt 的內容，並存入全局陣列
+fs.readFile('C:\\Users\\User\\OneDrive\\桌面\\aa.txt', 'utf8', (err, fileContent) => {
+  if (err) {
+    console.error('讀取錯誤:', err);
+  } else {
+    // 將 aa.txt 內容存入全局陣列
+    fileContentsArray.push(fileContent);
+  }
+});
+
+// 函數用於更新 aa.txt 檔案內容
+function updateFileContent(newContent, callback) {
+  const filePath = 'C:\\Users\\User\\OneDrive\\桌面\\aa.txt';
+
+  // 更新檔案為新內容
+  fs.writeFile(filePath, newContent, 'utf8', (writeErr) => {
+    if (writeErr) {
+      console.error('更新檔案內容時發生錯誤:', writeErr);
+      callback(writeErr);
+    } else {
+      console.log('檔案內容已成功更新。');
+      // 將新內容加入全局陣列
+      fileContentsArray.push(newContent);
+      console.log('新內容已存入全局陣列。');
+      callback(null);
+    }
+  });
+}
 
 // 處理 POST 請求
 app.post('/api/login', (req, res) => {
@@ -34,40 +66,47 @@ app.post('/api/login', (req, res) => {
   User.findOne({ account: account })
     .then(user => {
       if (user) {
+        // 確保 user.content 是一個陣列
+        if (!Array.isArray(user.content)) {
+          user.content = [];
+        }
         // 帳號已存在，驗證密碼
         if (user.password === password) {
-          console.log('Login successful\n');
-          console.log('User account:', user.account, '\nUser password:', user.password, '\nUser content:', user.content, '\n------------------------------');
-        } else {
-          console.log('Invalid account or password', '\n------------------------------');
-          res.status(401).send('Invalid account or password');
-        }
-      } else {
-        // 帳號不存在，新增使用者
-        // 讀取本地文件内容
-        fs.readFile('C:\\Users\\User\\OneDrive\\桌面\\aa.txt', 'utf8', (err, fileContent) => {
-          if (err) {
-            console.error('Error reading file:', err);
-            res.status(500).send('Error reading file');
-            return;
-          }
-          const newUser = new User({ account, password, content: fileContent });
-          newUser.save()
+          console.log('登入成功\n');
+          console.log('使用者帳號:', user.account, '\n使用者密碼:', user.password, '\nUser content:', user.content, '\n------------------------------');
+
+          // 更新使用者的 content 屬性為 aa.txt 的內容
+          user.content.push(fileContentsArray[fileContentsArray.length - 1]); // 將最後一個 aa.txt 內容新增至使用者的 content 陣列
+          user.save()
             .then(() => {
-              console.log('New User saved to MongoDB:', newUser, '\n------------------------------');
+              console.log('使用者內容已成功更新:', user, '\n------------------------------');
+
+              // 更新 aa.txt 檔案內容
+              updateFileContent(fileContentsArray[fileContentsArray.length - 1], (err) => {
+                if (err) {
+                  console.error('上傳內容錯誤:', err);
+                  // Handle error if necessary
+                }
+              });
+              // 將整個 content 陣列回傳給前端
+              res.json({ contentArray: user.content });
             })
             .catch(error => {
-              console.error('Error saving user to MongoDB:', error);
+              console.error('儲存至MongoDB錯誤:', error);
             });
-        });
+        } else {
+          console.log('帳號或密碼無效', '\n------------------------------');
+          res.status(401).send('帳號或密碼無效');
+        }
+      } else {
+        // ...
       }
     })
     .catch(error => {
-      console.error('Error searching user in MongoDB:', error);
-      res.status(500).send('Error searching user');
+      console.error('找不到使用者:', error);
+      res.status(500).send('找不到使用者');
     });
 });
-
 
 // 啟動伺服器
 app.listen(3000, () => {
