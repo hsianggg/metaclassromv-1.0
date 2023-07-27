@@ -39,7 +39,6 @@ fs.readFile('C:\\Users\\User\\OneDrive\\桌面\\aa.txt', 'utf8', (err, fileConte
   }
 });
 
-// 函數用於更新 aa.txt 檔案內容
 function updateFileContent(newContent, callback) {
   const filePath = 'C:\\Users\\User\\OneDrive\\桌面\\aa.txt';
 
@@ -50,10 +49,19 @@ function updateFileContent(newContent, callback) {
       callback(writeErr);
     } else {
       console.log('檔案內容已成功更新。');
-      // 將新內容加入全局陣列
-      fileContentsArray.push(newContent);
-      console.log('新內容已存入全局陣列。');
-      callback(null);
+
+      // 每次都重新讀取 aa.txt 的內容並更新 fileContentsArray
+      //以免只有程式啟動時檢查更新
+      fs.readFile(filePath, 'utf8', (readErr, fileContent) => {
+        if (readErr) {
+          console.error('讀取錯誤:', readErr);
+        } else {
+          // 更新 fileContentsArray
+          fileContentsArray.push(fileContent);
+          console.log('新內容已存入全局陣列。');
+        }
+        callback(null);
+      });
     }
   });
 }
@@ -98,8 +106,6 @@ app.post('/api/login', (req, res) => {
           console.log('帳號或密碼無效', '\n------------------------------');
           res.status(401).send('帳號或密碼無效');
         }
-      } else {
-        // ...
       }
     })
     .catch(error => {
@@ -107,6 +113,20 @@ app.post('/api/login', (req, res) => {
       res.status(500).send('找不到使用者');
     });
 });
+
+
+//尋找所有 'content' 欄位為字串的文件，並將它們更新為空陣列
+//以免資料型態出錯
+User.updateMany(
+  { content: { $type: 'string' } },
+  { $set: { content: [] } }
+)
+  .then(() => {
+    console.log('已更新存在問題的文件。');
+  })
+  .catch(error => {
+    console.error('更新文件時出錯:', error);
+  });
 
 // 啟動伺服器
 app.listen(3000, () => {
