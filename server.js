@@ -17,7 +17,7 @@ mongoose.connect('mongodb+srv://409630760:ray2340104@database.2fesecl.mongodb.ne
   .then(() => console.log('連結至MongoDB\n------------------------------'))
   .catch(error => console.error('MongoDB連結錯誤:', error));
 
-// 建立 MongoDB 模型
+// 建立 MongoDB 模型(user1)儲存帳號跟對話
 const User = mongoose.model('user1', {
   account: String,
   password: String,
@@ -25,6 +25,12 @@ const User = mongoose.model('user1', {
     type: [String], // 將 content 定義為字串型別的陣列
     default: [] // 將預設值設置為空陣列
   }
+});
+// 建立 MongoDB 模型(LevelTime)來儲存玩家的關卡時間
+const LevelTime = mongoose.model('LevelTime', {
+  playerId: { type: mongoose.Schema.Types.ObjectId, required: true },
+  levelNumber: { type: Number, required: true },
+  completionTime: { type: Number, required: true },
 });
 
 let fileContentsArray = []; // 存放 aa.txt 的內容陣列
@@ -89,15 +95,32 @@ app.post('/api/login', (req, res) => {
             .then(() => {
               console.log('使用者內容已成功更新:', user, '\n------------------------------');
 
-              // 更新 aa.txt 檔案內容
-              updateFileContent(fileContentsArray[fileContentsArray.length - 1], (err) => {
-                if (err) {
-                  console.error('上傳內容錯誤:', err);
-                  // Handle error if necessary
-                }
+              // 取得使用者的 _id
+              const playerId = user._id;
+
+              // 紀錄玩家玩關卡的時間
+              const levelTime = new LevelTime({
+                playerId: playerId, // 直接使用user1裡使用者的 _id
+                levelNumber: 1, // 關卡編號，這裡的 1 可以是實際的關卡編號
+                completionTime: 1000, // 完成關卡的時間
               });
-              // 將整個 content 陣列回傳給前端
-              res.json({ contentArray: user.content });
+
+              levelTime.save()
+                .then(() => {
+                  console.log('玩家關卡時間已儲存:', levelTime);
+
+                  // 更新 aa.txt 檔案內容
+                  updateFileContent(fileContentsArray[fileContentsArray.length - 1], (err) => {
+                    if (err) {
+                      console.error('上傳內容錯誤:', err);
+                    }
+                  });
+                  // 將整個 content 陣列回傳給前端
+                  res.json({ contentArray: user.content });
+                })
+                .catch(error => {
+                  console.error('儲存至MongoDB錯誤:', error);
+                });
             })
             .catch(error => {
               console.error('儲存至MongoDB錯誤:', error);
