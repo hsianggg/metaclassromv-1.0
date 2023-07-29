@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>錄音</title>
+</head>
+
+<body>
+  <h1>錄音</h1>
+  <button id="startButton">開始錄音</button>
+  <button id="stopButton">停止錄音</button>
+  <br>
+  <audio controls id="audioPlayer" style="display: none;"></audio>
+
+  <script>
+    let mediaRecorder;
+    let chunks = [];
+
+    const startButton = document.getElementById('startButton');
+    const stopButton = document.getElementById('stopButton');
+    const audioPlayer = document.getElementById('audioPlayer');
+
+    // 啟動錄音
+    startButton.addEventListener('click', async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            chunks.push(event.data);
+          }
+        };
+
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(chunks, { type: 'audio/m4a' });
+       //   const downloadLink = document.createElement('a');
+       //   downloadLink.href = URL.createObjectURL(blob);
+       //  downloadLink.download = '錄音檔案.m4a';
+       //  downloadLink.click();
+          sendtoserver(blob);
+          chunks = [];
+          const audioURL = URL.createObjectURL(blob);
+          audioPlayer.src = audioURL;
+          audioPlayer.style.display = 'block';
+        };
+
+        mediaRecorder.start();
+        startButton.disabled = true;
+        stopButton.disabled = false;
+      } catch (err) {
+        console.error('無法訪問麥克風: ', err);
+      }
+    });
+
+    // 停止錄音
+    stopButton.addEventListener('click', () => {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+        startButton.disabled = false;
+        stopButton.disabled = true;
+      }
+    });
+
+    async function sendtoserver(blob) {
+      try {
+        const formData = new FormData();
+        formData.append('file', blob);
+        const response = await fetch('/transcribe', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (response.ok) {
+          const transcription = await response.text();
+          console.log('語音轉錄結果：', transcription);
+        } else {
+          console.error('語音轉錄請求失敗：', response.status);
+        }
+      } catch (error) {
+        console.error('發生錯誤：', error);
+      }
+    }
+  </script>
+</body>
+
+</html>
