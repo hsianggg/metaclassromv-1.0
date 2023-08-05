@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.4.0/axios.min.js"></script>
+</head>
+<body>
+    <script>
+        const subscriptionKey = '0854afd08d1a4bf08bb717c4158cc54e';
+        const region = 'eastus'; // Azure 資源所在的區域
+        const text = '你好，我是 Azure 語音服務。';
+        const language = 'zh-TW'; 
+        const baseUrl = `https://${region}.customvoice.api.speech.microsoft.com`;
+
+        const url = `${baseUrl}/cognitiveservices/v1`;
+        const config = {
+            headers: {
+                'Ocp-Apim-Subscription-Key': subscriptionKey,
+                'Content-Type': 'application/ssml+xml',
+                'X-Microsoft-OutputFormat': 'riff-24khz-16bit-mono-pcm'
+            }
+        };
+        
+        const requestBody = `<speak version='1.0' xml:lang=${language}><voice xml:lang=${language} xml:gender='Male'
+                                name='zh-TW-HanHanRUS'>
+                                    ${text}
+                            </voice></speak>`
+
+        axios.post(url, requestBody, config)
+            .then(response => {
+            // const audioData = response.data;
+            // const audio = new Audio();
+            // audio.src = URL.createObjectURL(new Blob([audioData], { type: 'audio/mp3' }));
+            // audio.play();
+            console.log(response);
+            // let audio = document.createElement('audio');
+            // audio.src = URL.createObjectURL(new Blob([response.data], { type: 'audio/mp3' }));
+            // audio.src = response.data;
+            // document.body.appendChild(audio);
+            })
+            .catch(error => {
+            console.log('發生錯誤:', error);
+            });
+    </script>
+</body>
+</html>

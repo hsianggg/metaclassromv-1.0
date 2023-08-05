@@ -1,5 +1,6 @@
-import * as THREE from 'three'
-import * as CANNON from '../../../node_modules/cannon-es/dist/cannon-es.js'
+import * as THREE from 'three';
+import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
+import CANNON from 'cannon-es';
 
 /**
  * @author mrdoob / http://mrdoob.com/
