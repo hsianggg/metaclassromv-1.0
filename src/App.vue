@@ -1,84 +1,133 @@
 <template>
-  <div>
-    <h1>錄音功能測試</h1>
-    <div>
-      <button v-if="!isRecording" @click="handleStartRecording">開始錄音</button>
-      <button v-else @click="handleStopRecording" class="stop-button">停止錄音</button>
+  <h1>登入</h1>
+  <form @submit="handleSubmit">
+    <label>帳號:</label>
+    <input type="text" required v-model="account">
+    <label>密碼:</label>
+    <input type="password" required v-model="password">
+    <div v-if="passwordError" class="error">{{ passwordError }}</div>
+    <div class="terms">
+      <input type="checkbox" v-model="terms" required>
+      <label>同意所有條款</label>
     </div>
-    <div class="volume-meter" :style="{ width: volume * 100 + '%' }"></div>
+    <div class="submit">
+      <button type="submit">確認</button>
+    </div>
+  </form>
+  <p>帳號: {{ account }}</p>
+  <p>密碼: {{ password }}</p>
+  <p>Terms accept: {{ terms }}</p>
+   <div>
+    <h1>錯誤</h1>
+    <p v-if="error" class="error">{{ error }}</p>
   </div>
 </template>
-
 <script>
-import { startRecording, stopRecording, saveRecording } from '../recording/Recorder1.js';
+// 在 Vue 組件中使用 axios
+import axios from 'axios';
 
 export default {
   data() {
     return {
-      isRecording: false,
-      volume: 0,
+      account: '',
+      password: '',
+      terms: false,
+      passwordError: ''
     };
   },
   methods: {
-    async handleStartRecording() {
-      try {
-        await startRecording((volume) => {
-          this.volume = volume; // 更新音量條顯示
-        });
-        this.isRecording = true;
-      } catch (error) {
-        console.error('無法開始錄音：', error);
-      }
-    },
-    async handleStopRecording() {
-      try {
-        const recordedChunks = await stopRecording();
-        this.isRecording = false;
-        saveRecording(recordedChunks);
-      } catch (error) {
-        console.error('無法停止錄音：', error);
+    handleSubmit(event) {
+      this.passwordError = this.password.length > 5 ? '' : '密碼至少需要6個字元';
+
+      if (!this.passwordError) {
+        const formData = {
+          account: this.account,
+          password: this.password,
+        };
+
+        axios.post('http://localhost:3000/api/login', formData)
+          .then(response => {
+            console.log(response.data);
+            this.account = response.data.account; // 將帳號值指派給 account 變數
+            this.password = response.data.password; // 將密碼值指派給 password 變數
+          })
+          .catch(error => {
+            console.error(error);
+            this.error = error.response.data; // 將伺服器回應的錯誤訊息儲存到 error 屬性中
+            // 處理錯誤回應
+            // 使用 window.alert() 顯示錯誤訊息
+        window.alert(this.error);
+          });
+      } else {
+        event.preventDefault(); // 防止表單提交
       }
     },
   },
+  mounted() {
+    // 向伺服器發送 GET 請求
+    axios.get('http://localhost:3000/api/users')
+      .then(response => {
+        this.users = response.data; // 將伺服器返回的使用者資料存儲在 users 屬性中
+      })
+      .catch(error => {
+        console.error('Error fetching users from server:', error);
+      });
+  }
 };
 </script>
-
 <style>
 h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-  color: #fff;
+  color: black;
 }
-
+form {
+  max-width: 540px;
+  margin: 30px auto;
+  background: white;
+  text-align: left;
+  padding: 40px;
+  border-radius: 10px;
+}
+label {
+  color: #aaa;
+  display: inline-block;
+  margin: 15px 0 15px;
+  font-size: 1.2em;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-weight: bold;
+}
+input,
+select {
+  display: block;
+  padding: 5px 10px;
+  width: 100%;
+  box-sizing: border-box;
+  border: none;
+  border-bottom: 1px solid #ddd;
+  color: #555;
+}
+input[type="checkbox"] {
+  display: inline-block;
+  width: 16px;
+  margin: 0 10px 0 0;
+  position: relative;
+  top: 2px;
+}
 button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  color: #fff;
-  cursor: pointer;
-  transition: border-color 0.25s;
-  margin: 0.5em;
+  background: #0b6dff;
+  border: 0;
+  padding: 10px 20px;
+  margin-top: 20px;
+  color: white;
+  border-radius: 20px;
 }
-button:hover {
-  border-color: #646cff;
+.submit {
+  text-align: center;
 }
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-.stop-button {
-  width: 3em;
-  height: 3em;
-}
-
-.volume-meter {
-  height: 20px;
-  background-color: #646cff;
-  margin-top: 1em;
+.error {
+  color: #ff0062;
+  margin-top: 10px;
+  font-size: 0.8em;
+  font-weight: bold;
 }
 </style>
